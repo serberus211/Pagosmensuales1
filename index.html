@@ -8,6 +8,24 @@
 <meta name="apple-mobile-web-app-title" content="Pagos">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#1f6f5c">
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+window.__syncTag=function(){
+  if(window.__os&&window.__pend!=null){
+    try{window.__os.User.addTag('pendiente',window.__pend>0?'si':'no')}catch(e){}
+  }
+};
+window.OneSignalDeferred=window.OneSignalDeferred||[];
+OneSignalDeferred.push(async function(OneSignal){
+  await OneSignal.init({
+    appId:"b4164c7d-ba66-4ae4-aaa3-7d394ee7c37c",
+    serviceWorkerPath:"Pagosmensuales1/OneSignalSDKWorker.js",
+    serviceWorkerParam:{scope:"/Pagosmensuales1/"}
+  });
+  window.__os=OneSignal;
+  window.__syncTag();
+});
+</script>
 <title>Pagos del mes</title>
 <style>
 :root{--bg:#eef3f1;--card:#fff;--ink:#14302b;--mute:#5c7570;--line:#d3dfdb;--ok:#1f6f5c;--warn:#b7791f;--bad:#b3261e;
@@ -43,6 +61,7 @@ h2{font-size:15px;margin:22px 0 10px}
 .add input.full{grid-column:1/-1}
 .add button{grid-column:1/-1;font:inherit;font-weight:600;background:var(--ok);color:#fff;border:0;border-radius:10px;padding:12px;cursor:pointer}
 button:focus-visible,input:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+.notif{display:block;width:100%;margin-top:22px;font:inherit;font-weight:600;color:var(--ok);background:none;border:2px solid var(--ok);border-radius:10px;padding:11px;cursor:pointer}
 .empty{color:var(--mute);text-align:center;padding:18px 0}
 .note{font-size:13px;color:var(--mute);margin-top:22px}
 </style>
@@ -68,6 +87,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--warn);outline-o
     <input class="full" id="lim" type="number" inputmode="numeric" min="1" max="31" placeholder="Día límite de pago (opcional)">
     <button id="btn" type="button">Guardar pago</button>
   </div>
+  <button id="notif" class="notif" type="button">Activar recordatorios diarios</button>
   <p class="note">Tus pagos se guardan en este teléfono y se repiten cada mes. Al empezar un mes nuevo, todos vuelven a quedar pendientes.</p>
 </main>
 <script>
@@ -90,6 +110,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--warn);outline-o
     var pd=data.pagado[mk];
     var hechos=pg.filter(function(p){return pd.indexOf(p.id)>-1}).length;
     var pend=pg.length-hechos;
+    window.__pend=pend; window.__syncTag();
     $('mes').textContent=meses[hoy.getMonth()].charAt(0).toUpperCase()+meses[hoy.getMonth()].slice(1)+' '+hoy.getFullYear();
     var pend15=pg.filter(function(p){return L(p)<=15&&pd.indexOf(p.id)<0}).length;
     if(!pg.length){$('falta').textContent='Sin pagos aún';$('sub').textContent='Anota abajo tu primer pago del mes.'}
@@ -131,6 +152,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--warn);outline-o
     data.pagos.push({id:'p'+Date.now(),nom:nom,dia:dia,val:val,lim:lim});
     $('nom').value='';$('dia').value='';$('val').value='';$('lim').value='';
     save();render();
+  });
+  var nb=$('notif');
+  try{if(!('Notification' in window)||Notification.permission==='granted')nb.style.display='none'}catch(e){}
+  nb.addEventListener('click',function(){
+    window.OneSignalDeferred=window.OneSignalDeferred||[];
+    OneSignalDeferred.push(async function(OS){
+      try{await OS.Notifications.requestPermission(); if(Notification.permission==='granted')nb.style.display='none'}catch(e){}
+    });
   });
   render();
 })();
