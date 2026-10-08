@@ -16,15 +16,36 @@ window.__syncTag=function(){
   }
 };
 window.OneSignalDeferred=window.OneSignalDeferred||[];
+window.__diag=function(t){
+  var d=document.getElementById('diag');
+  if(d){d.textContent=t}else{setTimeout(function(){window.__diag(t)},400)}
+};
+window.__estado=function(){
+  try{
+    var os=window.__os,sub=os.User.PushSubscription;
+    window.__diag('Diagnóstico: permiso='+Notification.permission+' · suscrito='+(sub.optedIn?'sí':'no')+' · id='+(sub.id||'ninguno'));
+  }catch(e){window.__diag('Diagnóstico: error leyendo estado: '+e.message)}
+};
+window.OneSignalDeferred=window.OneSignalDeferred||[];
 OneSignalDeferred.push(async function(OneSignal){
-  await OneSignal.init({
-    appId:"b4164c7d-ba66-4ae4-aaa3-7d394ee7c37c",
-    serviceWorkerPath:"Pagosmensuales1/OneSignalSDKWorker.js",
-    serviceWorkerParam:{scope:"/Pagosmensuales1/"}
-  });
-  window.__os=OneSignal;
-  window.__syncTag();
+  window.__diag('Diagnóstico: iniciando OneSignal…');
+  try{
+    await OneSignal.init({
+      appId:"b4164c7d-ba66-4ae4-aaa3-7d394ee7c37c",
+      serviceWorkerPath:"Pagosmensuales1/OneSignalSDKWorker.js",
+      serviceWorkerParam:{scope:"/Pagosmensuales1/"}
+    });
+    window.__os=OneSignal;
+    window.__syncTag();
+    window.__estado();
+    OneSignal.User.PushSubscription.addEventListener('change',window.__estado);
+  }catch(e){
+    window.__diag('Diagnóstico: error al iniciar OneSignal: '+(e&&e.message?e.message:e));
+  }
 });
+setTimeout(function(){
+  if(!window.__os)window.__diag('Diagnóstico: OneSignal no cargó (revisa tu conexión o bloqueadores de anuncios).');
+},8000);
 </script>
 <title>Pagos del mes</title>
 <style>
@@ -88,6 +109,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--warn);outline-o
     <button id="btn" type="button">Guardar pago</button>
   </div>
   <button id="notif" class="notif" type="button">Activar recordatorios diarios</button>
+  <p class="note" id="diag" style="word-break:break-all"></p>
   <p class="note">Tus pagos se guardan en este teléfono y se repiten cada mes. Al empezar un mes nuevo, todos vuelven a quedar pendientes.</p>
 </main>
 <script>
@@ -158,7 +180,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--warn);outline-o
   nb.addEventListener('click',function(){
     window.OneSignalDeferred=window.OneSignalDeferred||[];
     OneSignalDeferred.push(async function(OS){
-      try{await OS.Notifications.requestPermission(); if(Notification.permission==='granted')nb.style.display='none'}catch(e){}
+      try{await OS.Notifications.requestPermission(); if(Notification.permission==='granted')nb.style.display='none'}catch(e){window.__diag('Diagnóstico: error al pedir permiso: '+(e&&e.message?e.message:e))}
+      setTimeout(window.__estado,1500);
     });
   });
   render();
