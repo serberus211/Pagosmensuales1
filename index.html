@@ -183,10 +183,19 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--warn);outline-o
   var nb=$('notif');
   try{if(!('Notification' in window)||Notification.permission==='granted')nb.style.display='none'}catch(e){}
   nb.addEventListener('click',function(){
-    window.OneSignalDeferred=window.OneSignalDeferred||[];
-    OneSignalDeferred.push(async function(OS){
-      try{await OS.Notifications.requestPermission(); if(Notification.permission==='granted')nb.style.display='none'}catch(e){window.__diag('Diagnóstico: error al pedir permiso: '+(e&&e.message?e.message:e))}
+    window.__diag('Diagnóstico: pidiendo permiso…');
+    var os=window.__os;
+    if(!os){window.__diag('Diagnóstico: OneSignal aún no está listo. Espera unos segundos y vuelve a tocar.');return}
+    var p;
+    try{p=os.Notifications.requestPermission()}catch(e){window.__diag('Diagnóstico: error al pedir permiso: '+(e&&e.message?e.message:e));return}
+    Promise.resolve(p).then(function(){
+      if(Notification.permission==='granted'){
+        try{os.User.PushSubscription.optIn()}catch(e){}
+        nb.style.display='none';
+      }
       setTimeout(window.__estado,1500);
+    }).catch(function(e){
+      window.__diag('Diagnóstico: error al pedir permiso: '+(e&&e.message?e.message:e));
     });
   });
   render();
