@@ -28,6 +28,7 @@ window.__estado=function(){
 };
 window.OneSignalDeferred=window.OneSignalDeferred||[];
 OneSignalDeferred.push(async function(OneSignal){
+  window.__started=true;
   window.__diag('Diagnóstico: iniciando OneSignal…');
   try{
     await OneSignal.init({
@@ -40,12 +41,16 @@ OneSignalDeferred.push(async function(OneSignal){
     window.__estado();
     OneSignal.User.PushSubscription.addEventListener('change',window.__estado);
   }catch(e){
+    window.__fallo=true;
     window.__diag('Diagnóstico: error al iniciar OneSignal: '+(e&&e.message?e.message:e));
   }
 });
 setTimeout(function(){
-  if(!window.__os)window.__diag('Diagnóstico: OneSignal no cargó (revisa tu conexión o bloqueadores de anuncios).');
+  if(!window.__started)window.__diag('Diagnóstico: el código de OneSignal no se ejecutó (revisa bloqueadores de anuncios).');
 },8000);
+setTimeout(function(){
+  if(window.__started&&!window.__os&&!window.__fallo)window.__diag('Diagnóstico: OneSignal cargó pero no termina de iniciar.');
+},15000);
 </script>
 <title>Pagos del mes</title>
 <style>
